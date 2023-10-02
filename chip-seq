@@ -1,0 +1,191 @@
+for folder in /Users/seanmurphy/Documents/linda_chip/* 
+do
+	fol=$(echo "$folder" | tail -c 8) 
+	bowtie2 -p 10 -x /Users/seanmurphy/Documents/GRCh38_noalt_as/GRCh38_noalt_as -1 "$folder"/*R1_001.fastq.gz -2 "$folder"/*R2_001.fastq.gz -S /Volumes/sean_transfer/"$fol".sam
+done
+
+# MACS3
+#create environment
+python3 -m venv MyPythonEnv/
+
+#activate environment
+source MyPythonEnv/bin/activate
+
+cd /Volumes/sean_transfer/linda_chip_sam/sorted_bam
+macs3 callpeak -t d0_h_1.sam.bam_sorted.bam -c d0_i_1.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d0_h_1_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d0_h_2.sam.bam_sorted.bam -c d0_i_2.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d0_h_2_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d1_h_1.sam.bam_sorted.bam -c d1_i_1.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d1_h_1_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d1_h_2.sam.bam_sorted.bam -c d1_i_2.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d1_h_2_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d2_h_1.sam.bam_sorted.bam -c d2_i_1.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d2_h_1_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d2_h_2.sam.bam_sorted.bam -c d2_i_2.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d2_h_2_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d6_h_1.sam.bam_sorted.bam -c d6_i_1.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d6_h_1_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d6_h_2.sam.bam_sorted.bam -c d6_i_2.sam.bam_sorted.bam --broad -f BAMPE -g hs -n d6_h_2_broad0.1 -B --broad-cutoff 0.1
+macs3 callpeak -t d0_j_1.sam.bam_sorted.bam -c d0_i_1.sam.bam_sorted.bam -f BAMPE -g hs -n d0_j_1 -B -q 0.01
+macs3 callpeak -t d0_j_2.sam.bam_sorted.bam -c d0_i_2.sam.bam_sorted.bam -f BAMPE -g hs -n d0_j_2 -B -q 0.01
+macs3 callpeak -t d1_j_1.sam.bam_sorted.bam -c d1_i_1.sam.bam_sorted.bam -f BAMPE -g hs -n d1_j_1 -B -q 0.01
+macs3 callpeak -t d1_j_2.sam.bam_sorted.bam -c d1_i_2.sam.bam_sorted.bam -f BAMPE -g hs -n d1_j_2 -B -q 0.01
+macs3 callpeak -t d2_j_1.sam.bam_sorted.bam -c d2_i_1.sam.bam_sorted.bam -f BAMPE -g hs -n d2_j_1 -B -q 0.01
+macs3 callpeak -t d2_j_2.sam.bam_sorted.bam -c d2_i_2.sam.bam_sorted.bam -f BAMPE -g hs -n d2_j_2 -B -q 0.01
+macs3 callpeak -t d6_j_1.sam.bam_sorted.bam -c d6_i_1.sam.bam_sorted.bam -f BAMPE -g hs -n d6_j_1 -B -q 0.01
+macs3 callpeak -t d6_j_2.sam.bam_sorted.bam -c d6_i_2.sam.bam_sorted.bam -f BAMPE -g hs -n d6_j_2 -B -q 0.01
+
+#install homer
+perl /Users/seanmurphy/homer/configureHomer.pl -install
+perl /Users/seanmurphy/homer/configureHomer.pl -install human
+perl /Users/seanmurphy/homer/configureHomer.pl -install hg38
+
+
+#load homer every time
+PATH=$PATH:/Users/seanmurphy/homer/bin/
+source ~/.bash_profile
+
+
+#run homer - annotate peaks
+
+cd /Users/seanmurphy/Documents/linda_chip/MACS3
+for file in *.narrowPeak
+do
+	annotatePeaks.pl "$file" hg38 > "${file:0:6}".txt
+done
+
+cd /Users/seanmurphy/Documents/linda_chip/broad_peaks_0.1
+for file in *.broadPeak
+do
+	annotatePeaks.pl "$file" hg38 > "${file:0:6}".txt
+done
+
+
+#motifs
+for file in *.bed
+do
+	findMotifsGenome.pl "$file" hg38 "${file:0:6}" -size 200 -bits
+done
+
+cd /Users/seanmurphy/Documents/linda_chip/broad_peaks_0.1
+for file in *.broadPeak
+do
+	findMotifsGenome.pl "$file" hg38 "${file:0:6}" -size 200 -bits
+done
+
+
+#make big wig
+cd /Volumes/sean_transfer/linda_chip_sam/sorted_bam
+for file in *_sorted.bam
+do 
+	bamCoverage --bam "$file" -o "$file".bw
+done
+
+python3 -m venv MyPythonEnv/
+source MyPythonEnv/bin/activate
+
+#pip install macs3
+macs3 callpeak -t d0_j_1.sam.bam_sorted.bam -c d0_i_1.sam.bam_sorted.bam -f BAMPE -g hs -n d0_j_1 -B -q 0.01
+macs3 callpeak -t d0_j_2.sam.bam_sorted.bam -c d0_i_2.sam.bam_sorted.bam -f BAMPE -g hs -n d0_j_2 -B -q 0.01
+macs3 callpeak -t d1_j_1.sam.bam_sorted.bam -c d1_i_1.sam.bam_sorted.bam -f BAMPE -g hs -n d1_j_1 -B -q 0.01
+macs3 callpeak -t d1_j_2.sam.bam_sorted.bam -c d1_i_2.sam.bam_sorted.bam -f BAMPE -g hs -n d1_j_2 -B -q 0.01
+
+
+cd /Users/seanmurphy/Documents/bowtie2
+./bowtie2 -p 10 -x /Users/seanmurphy/Documents/hg19/hg19 -1 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1675_2_S41_L002_R1.fastq.gz -2 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1675_2_S41_L002_R2.fastq.gz -S /Volumes/sean_transfer/atac_0_A.sam
+./bowtie2 -p 10 -x /Users/seanmurphy/Documents/hg19/hg19 -1 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1676_2_S42_L002_R1.fastq.gz -2 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1676_2_S42_L002_R2.fastq.gz -S /Volumes/sean_transfer/atac_0_B.sam
+./bowtie2 -p 10 -x /Users/seanmurphy/Documents/hg19/hg19 -1 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1677_2_S43_L002_R1.fastq.gz -2 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1677_2_S43_L002_R2.fastq.gz -S /Volumes/sean_transfer/atac_1_A.sam
+./bowtie2 -p 10 -x /Users/seanmurphy/Documents/hg19/hg19 -1 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1678_2_S44_L002_R1.fastq.gz -2 /Users/seanmurphy/Documents/Linda/Linda_atac/fastq/QY_1678_2_S44_L002_R2.fastq.gz -S /Volumes/sean_transfer/atac_1_B.sam
+
+export PATH=/Users/seanmurphy/Documents/samtools:$PATH  
+cd /Volumes/sean_transfer
+for file in *.sam
+do
+	samtools view -S -b "$file" > "$file".bam
+done
+
+for file in *.bam
+do
+	samtools sort "$file" > "$file"_sorted.bam
+done
+
+for file in *_sorted.bam
+do
+	samtools index "$file" 
+done
+
+
+#remove duplicates - input output files are tricky
+for file in *sam.bam
+do
+	samtools sort -n -o "$file"_ns.bam -O BAM "$file"
+done
+
+
+for file in *_ns.bam
+do
+	samtools fixmate -m "$file" "$file"_fm.bam
+done
+
+
+for file in *_fm.bam
+do
+	samtools sort -o "$file"_cs.bam "$file"
+done
+
+for file in *_cs.bam
+do
+	samtools markdup -r -s "$file" "$file"_nodup.bam
+done
+
+
+cd /Users/seanmurphy/Desktop/h1f0_overlap
+#merge
+cat d0_j_1_peaks.bed d0_j_2_peaks.bed | sort -k1,1 -k2,2n | bedtools merge -i stdin > d0_junb_peaks.bed
+
+cat d0_j_1_peaks.bed d0_j_2_peaks.bed | sort -k1,1 -k2,2n > jsort.bed #had to edit jsort.bed to remove 
+bedtools merge -i jsort.bed > d0_junb_peaks.bed
+
+cat atac_0_A_peaks.narrowPeak atac_0_B_peaks.narrowPeak | sort -k1,1 -k2,2n  | bedtools merge -i stdin > atac_0.bed
+cat atac_1_A_peaks.narrowPeak atac_1_B_peaks.narrowPeak | sort -k1,1 -k2,2n  | bedtools merge -i stdin > atac_1.bed
+
+
+cat H10_1_Peaks.bed H10_2_Peaks.bed | sort -k1,1 -k2,2n  | bedtools merge -i stdin > h1f0_peaks.bed
+cat H10_1_Peaks.bed H10_2_Peaks.bed | sort -k1,1 -k2,2n > sorted.bed #needed to remove 1 line that didnt properly sort but it was already covered so no data lost
+bedtools merge -i sorted.bed > h1f0_peaks.bed
+
+
+  
+bedtools intersect -a d0_junb_peaks.bed -b h1f0_peaks.bed > junb_h1f0.bed 
+PATH=$PATH:/Users/seanmurphy/homer/bin/
+source ~/.bash_profile
+annotatePeaks.pl junb_h1f0.bed hg19 > junb_h1f0_anno
+annotatePeaks.pl atac_0.bed hg19 -annStats atac_0_stats > atac_0_anno
+annotatePeaks.pl atac_1.bed hg19 -annStats atac_1_stats > atac_1_anno
+
+annotatePeaks.pl et_peaks.bed hg19 > et_peaks
+
+bedtools subtract -A -a atac_1.bed -b atac_0.bed > open_d1_closed_d0.bed
+
+annotatePeaks.pl open_d1_closed_d0.bed hg19 > open_d1_closed_d0_anno
+
+bedtools subtract -A -a atac_0.bed -b atac_1.bed > open_d0_closed_d1.bed
+
+annotatePeaks.pl open_d0_closed_d1.bed hg19 > open_d0_closed_d1_anno
+
+bedtools subtract -A -a junb_h1f0.bed -b atac_0.bed > h1f0_junb_closed.bed #then put this into 
+annotatePeaks.pl h1f0_junb_closed.bed hg19 > h1f0_junb_closed_anno
+findMotifsGenome.pl h1f0_junb_closed.bed hg19 h1f0_junb_closed  -size 200 -bits
+
+bedtools intersect -a open_d1_closed_d0.bed -b junb_h1f0.bed > junb_h1f0_d1open_d0closed.bed
+annotatePeaks.pl junb_h1f0_d1open_d0closed.bed hg19 > junb_h1f0_d1open_d0closed_anno
+
+
+bedtools jaccard -a atac_0_A_peaks.narrowPeak -b atac_0_B_peaks.narrowPeak
+
+bedtools jaccard -a atac_1_A_peaks.narrowPeak -b atac_1_B_peaks.narrowPeak
+
+bedtools jaccard -a atac_1.bed -b atac_0.bed
+
+bedtools jaccard -a d0_j_1_peaks.bed -b d0_j_2_peaks.bed
+
+bedtools intersect -a atac_0.bed  -b atac_1.bed > open_d0_open_d1.bed
+annotatePeaks.pl open_d0_open_d1.bed hg19 > open_d0_open_d1_anno
+
+bedtools intersect -a atac_0.bed  -b atac_1.bed > open_d0_open_d1.bed
+annotatePeaks.pl open_d0_open_d1.bed hg19 > open_d0_open_d1_anno
+
